@@ -219,6 +219,7 @@ class ShareViewController: SLComposeServiceViewController {
             responder = responder!.next
         }
         extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
+        extensionContext!.cancelRequest(withError: NSError())
     }
     
     enum RedirectType {

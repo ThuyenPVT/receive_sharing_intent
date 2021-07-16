@@ -4,12 +4,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 class ReceiveSharingIntent {
-  static const MethodChannel _mChannel =
-      const MethodChannel('receive_sharing_intent/messages');
-  static const EventChannel _eChannelMedia =
-      const EventChannel("receive_sharing_intent/events-media");
-  static const EventChannel _eChannelLink =
-      const EventChannel("receive_sharing_intent/events-text");
+  static const MethodChannel _mChannel = const MethodChannel('receive_sharing_intent/messages');
+  static const EventChannel _eChannelMedia = const EventChannel("receive_sharing_intent/events-media");
+  static const EventChannel _eChannelLink = const EventChannel("receive_sharing_intent/events-text");
 
   static Stream<List<SharedMediaFile>> _streamMedia;
   static Stream<String> _streamLink;
@@ -22,12 +19,10 @@ class ReceiveSharingIntent {
   /// NOTE. The returned media on iOS (iOS ONLY) is already copied to a temp folder.
   /// So, you need to delete the file after you finish using it
   static Future<List<SharedMediaFile>> getInitialMedia() async {
-    final String json = await _mChannel.invokeMethod('getInitialMedia');
-    if (json == null) return null;
+    final json = await _mChannel.invokeMethod('getInitialMedia');
+    if (json == null) return [];
     final encoded = jsonDecode(json);
-    return encoded
-        .map<SharedMediaFile>((file) => SharedMediaFile.fromJson(file))
-        .toList();
+    return encoded.map<SharedMediaFile>((file) => SharedMediaFile.fromJson(file)).toList();
   }
 
   /// Returns a [Future], which completes to one of the following:
@@ -44,8 +39,7 @@ class ReceiveSharingIntent {
   /// If the link is not valid as a URI or URI reference,
   /// a [FormatException] is thrown.
   static Future<Uri> getInitialTextAsUri() async {
-    final String data = await getInitialText();
-    if (data == null) return null;
+    final data = await getInitialText();
     return Uri.parse(data);
   }
 
@@ -66,25 +60,19 @@ class ReceiveSharingIntent {
   /// If the app was started by a link intent or user activity the stream will
   /// not emit that initial one - query either the `getInitialMedia` instead.
   static Stream<List<SharedMediaFile>> getMediaStream() {
-    if (_streamMedia == null) {
-      final stream =
-          _eChannelMedia.receiveBroadcastStream("media").cast<String>();
-      _streamMedia = stream.transform<List<SharedMediaFile>>(
-        new StreamTransformer<String, List<SharedMediaFile>>.fromHandlers(
-          handleData: (String data, EventSink<List<SharedMediaFile>> sink) {
-            if (data == null) {
-              sink.add(null);
-            } else {
-              final encoded = jsonDecode(data);
-              sink.add(encoded
-                  .map<SharedMediaFile>(
-                      (file) => SharedMediaFile.fromJson(file))
-                  .toList());
-            }
-          },
-        ),
-      );
-    }
+    final stream = _eChannelMedia.receiveBroadcastStream("media").cast<String>();
+    _streamMedia = stream.transform<List<SharedMediaFile>>(
+      new StreamTransformer<String, List<SharedMediaFile>>.fromHandlers(
+        handleData: (String data, EventSink<List<SharedMediaFile>> sink) {
+          if (data.isEmpty) {
+            sink.add([]);
+          } else {
+            final encoded = jsonDecode(data);
+            sink.add(encoded.map<SharedMediaFile>((file) => SharedMediaFile.fromJson(file)).toList());
+          }
+        },
+      ),
+    );
     return _streamMedia;
   }
 
@@ -105,10 +93,7 @@ class ReceiveSharingIntent {
   /// If the app was started by a link intent or user activity the stream will
   /// not emit that initial one - query either the `getInitialText` instead.
   static Stream<String> getTextStream() {
-    if (_streamLink == null) {
-      _streamLink = _eChannelLink.receiveBroadcastStream("text").cast<String>();
-    }
-    return _streamLink;
+    return _eChannelLink.receiveBroadcastStream("text").cast<String>();
   }
 
   /// A convenience transformation of the stream to a `Stream<Uri>`.
@@ -124,11 +109,7 @@ class ReceiveSharingIntent {
     return getTextStream().transform<Uri>(
       new StreamTransformer<String, Uri>.fromHandlers(
         handleData: (String data, EventSink<Uri> sink) {
-          if (data == null) {
-            sink.add(null);
-          } else {
-            sink.add(Uri.parse(data));
-          }
+          sink.add(Uri.parse(data));
         },
       ),
     );
